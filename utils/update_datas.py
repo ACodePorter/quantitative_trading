@@ -677,8 +677,29 @@ def update_ak2():
 def update_ak3():
     merge_ak_index()
     merge_ak_reits()
-    
-    
+
+
+def get_yf_virtual_data():
+    """获取 yfinance 虚拟货币历史数据"""
+    try:
+        # 获取比特币历史数据
+        ticker = yf.Ticker('BTC-USD')
+        hist = ticker.history(period='max')
+
+        # 简单格式转换
+        hist = hist.reset_index()
+        hist['日期'] = hist['Date'].dt.strftime('%Y-%m-%d')
+        hist = hist.rename(columns={'Close': '收盘', 'Open': '开盘', 'High': '高', 'Low': '低', 'Volume': '交易量'})
+
+        # 保存文件
+        filename = f"datas/virtual/比特币历史数据.csv"
+        ensure_dir(filename)
+        hist[['日期', '收盘', '开盘', '高', '低', '交易量']].to_csv(filename, index=False)
+        logger.info(f"比特币数据: {filename} 已更新")
+    except Exception as e:
+        logger.error(f"获取比特币数据失败: {str(e)}")
+
+
 if __name__ == "__main__":
     from utils.set_log import set_log
     set_log('update_datas.log')
