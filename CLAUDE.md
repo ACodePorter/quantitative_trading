@@ -150,3 +150,31 @@ Strategies are implemented as pure functions in `utils/logics/`:
 - Return structured results (dataclasses or DataFrames)
 - Use enums for strategy types
 - Include comprehensive docstrings explaining the algorithm
+
+### Data Processing Strategy: Raw vs Processed
+
+Pages choose between raw and processed data based on performance and complexity:
+
+#### **Use Processed Data** (`datas/processed/`)
+When data is large, requires complex computation, or expensive multi-source merging:
+- **index.py**: Merged global indices with normalization (multiple sources, heavy computation)
+- **reits.py**: Historical merged REITs data (time-series aggregation)
+- **period.py**: GDP/CPI macroeconomic data (multi-source merging)
+
+#### **Use Raw Data** (`datas/raw/` or `datas/virtual/`)
+When data is small, simple to merge, or requires real-time updates:
+- **virtual.py**: Cryptocurrency data (small datasets, simple merge)
+- **bond.py**: Convertible bonds (latest data needed, complex business logic in-page)
+- **metals.py**: Precious metals prices (real-time quotes)
+- **home.py**: News feeds (latest aggregation)
+
+#### **Decision Criteria**
+| Factor | Processed | Raw |
+|--------|-----------|-----|
+| Data size | Large | Small |
+| Computation | Complex (normalization, aggregation) | Simple (merge, filter) |
+| Update frequency | Stable | Frequent |
+| Page load impact | Pre-computed (fast) | Real-time (acceptable if fast) |
+
+#### **Performance Consideration**
+Page load time increases when processing large datasets. Pre-process heavy computations into `datas/processed/`, but simple merges (under ~10k rows) are acceptable in-page.
