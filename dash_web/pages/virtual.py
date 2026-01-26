@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import dash
+from functools import reduce
 # from pathlib import Path
 # import sys
 #
@@ -13,7 +14,27 @@ import dash
 dash.register_page(__name__)
 # app = Dash(__name__, use_pages=True, pages_folder="my_apps")
 
-df = pd.read_csv("datas/processed/virtual/all_virtual_data.csv")
+# 从原始数据文件读取并合并虚拟货币数据
+virtual_dir = "datas/virtual"
+currencies = {
+    '比特币': '比特币历史数据.csv',
+    '以太坊': '以太坊历史数据.csv',
+    'XRP': 'XRP历史数据.csv',
+    'BNB': 'BNB历史数据.csv',
+    'Solana': 'Solana历史数据.csv',
+    '泰达币': '泰达币历史数据.csv',
+}
+
+dfs = []
+for name, filename in currencies.items():
+    filepath = f"{virtual_dir}/{filename}"
+    df_temp = pd.read_csv(filepath)
+    df_temp = df_temp.rename(columns={'日期': 'date', '收盘': name})
+    dfs.append(df_temp[['date', name]])
+
+# 外连接合并所有货币数据
+df = reduce(lambda left, right: pd.merge(left, right, on='date', how='outer'), dfs)
+df = df.sort_values('date')
 # breakpoint()
 fig = px.line(
     df,
