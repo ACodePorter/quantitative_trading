@@ -683,21 +683,21 @@ def get_yf_virtual_data():
     """获取 yfinance 虚拟货币历史数据
 
     支持的虚拟货币：
-    - BTC-USD: 比特币
-    - ETH-USD: 以太坊
-    - XRP-USD: XRP
-    - BNB-USD: BNB
-    - SOL-USD: Solana
-    - USDT-USD: 泰达币
+    - BTC-USD: Bitcoin (BTC)
+    - ETH-USD: Ethereum (ETH)
+    - XRP-USD: XRP (XRP)
+    - BNB-USD: BNB (BNB)
+    - SOL-USD: Solana (SOL)
+    - USDT-USD: Tether (USDT)
     """
-    # 虚拟货币映射: yfinance代码 -> 中文名称
+    # 虚拟货币映射: yfinance代码 -> 英文全名+缩写
     virtual_currencies = {
-        'BTC-USD': '比特币',
-        'ETH-USD': '以太坊',
-        'XRP-USD': 'XRP',
-        'BNB-USD': 'BNB',
-        'SOL-USD': 'Solana',
-        'USDT-USD': '泰达币',
+        'BTC-USD': 'Bitcoin (BTC)',
+        'ETH-USD': 'Ethereum (ETH)',
+        'XRP-USD': 'XRP (XRP)',
+        'BNB-USD': 'BNB (BNB)',
+        'SOL-USD': 'Solana (SOL)',
+        'USDT-USD': 'Tether (USDT)',
     }
 
     for symbol, name in virtual_currencies.items():

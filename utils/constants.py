@@ -1,4 +1,3 @@
-
 MAIN_INDEX_SYMBOL_NAME_DICT = {
     'INX': "标普500指数",
     'DJI':  "道琼斯工业平均指数",
@@ -24,13 +23,4 @@ MAIN_INDEX_SYMBOL_NAME_DICT = {
     'MSCI加拿大指数历史数据': "MSCI加拿大指数",  # *0.76=美元
 
     'MSCI欧盟指数历史数据': "MSCI欧盟指数",  # *1.1=美元
-}
-
-VIRTUAL_SYMBOL_NAME_DICT = {
-    'BTC': "比特币",
-    'ETH': "以太坊",
-    'USDT': "泰达币",
-    'XRP': "XRP",
-    'BNB': "BNB",
-    'SOL': "Solana",
 }
