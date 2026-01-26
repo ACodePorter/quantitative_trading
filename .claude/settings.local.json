@@ -4,7 +4,9 @@
       "Bash(python:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(source:*)"
+      "Bash(source:*)",
+      "Bash(git mv:*)",
+      "Bash(git reset:*)"
     ]
   }
 }
