@@ -17,12 +17,12 @@ dash.register_page(__name__)
 # 从原始数据文件读取并合并虚拟货币数据
 virtual_dir = "datas/virtual"
 currencies = {
-    '比特币': '比特币历史数据.csv',
-    '以太坊': '以太坊历史数据.csv',
+    'BTC': 'BTC历史数据.csv',
+    'ETH': 'ETH历史数据.csv',
     'XRP': 'XRP历史数据.csv',
     'BNB': 'BNB历史数据.csv',
-    'Solana': 'Solana历史数据.csv',
-    '泰达币': '泰达币历史数据.csv',
+    'SOL': 'SOL历史数据.csv',
+    'USDT': 'USDT历史数据.csv',
 }
 
 dfs = []
