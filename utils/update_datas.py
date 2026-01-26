@@ -680,24 +680,54 @@ def update_ak3():
 
 
 def get_yf_virtual_data():
-    """获取 yfinance 虚拟货币历史数据"""
-    try:
-        # 获取比特币历史数据
-        ticker = yf.Ticker('BTC-USD')
-        hist = ticker.history(period='max')
+    """获取 yfinance 虚拟货币历史数据
 
-        # 简单格式转换
-        hist = hist.reset_index()
-        hist['日期'] = hist['Date'].dt.strftime('%Y-%m-%d')
-        hist = hist.rename(columns={'Close': '收盘', 'Open': '开盘', 'High': '高', 'Low': '低', 'Volume': '交易量'})
+    支持的虚拟货币：
+    - BTC-USD: 比特币
+    - ETH-USD: 以太坊
+    - XRP-USD: XRP
+    - BNB-USD: BNB
+    - SOL-USD: Solana
+    - USDT-USD: 泰达币
+    """
+    # 虚拟货币映射: yfinance代码 -> 中文名称
+    virtual_currencies = {
+        'BTC-USD': '比特币',
+        'ETH-USD': '以太坊',
+        'XRP-USD': 'XRP',
+        'BNB-USD': 'BNB',
+        'SOL-USD': 'Solana',
+        'USDT-USD': '泰达币',
+    }
 
-        # 保存文件
-        filename = f"datas/virtual/比特币历史数据.csv"
-        ensure_dir(filename)
-        hist[['日期', '收盘', '开盘', '高', '低', '交易量']].to_csv(filename, index=False)
-        logger.info(f"比特币数据: {filename} 已更新")
-    except Exception as e:
-        logger.error(f"获取比特币数据失败: {str(e)}")
+    for symbol, name in virtual_currencies.items():
+        try:
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period='max')
+
+            if hist.empty:
+                logger.warning(f"{name}({symbol}) 数据为空，跳过")
+                continue
+
+            # 格式转换
+            hist = hist.reset_index()
+            hist['日期'] = hist['Date'].dt.strftime('%Y-%m-%d')
+            hist = hist.rename(columns={
+                'Close': '收盘',
+                'Open': '开盘',
+                'High': '高',
+                'Low': '低',
+                'Volume': '交易量'
+            })
+
+            # 保存文件
+            filename = f"datas/virtual/{name}历史数据.csv"
+            ensure_dir(filename)
+            hist[['日期', '收盘', '开盘', '高', '低', '交易量']].to_csv(filename, index=False)
+            logger.info(f"{name}数据: {filename} 已更新，共 {len(hist)} 条记录")
+
+        except Exception as e:
+            logger.error(f"获取{name}({symbol})数据失败: {str(e)}")
 
 
 if __name__ == "__main__":
@@ -709,4 +739,5 @@ if __name__ == "__main__":
     update_ak1()
     update_ak2()
     update_ak3()
+    get_yf_virtual_data()
     
