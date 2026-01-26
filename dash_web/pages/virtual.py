@@ -9,7 +9,7 @@ from pathlib import Path
 dash.register_page(__name__)
 
 # 从原始数据文件读取并合并虚拟货币数据
-virtual_dir = Path("datas/virtual")
+virtual_dir = Path("datas/raw/virtual")
 csv_files = sorted(virtual_dir.glob("*历史数据.csv"))
 
 dfs = []

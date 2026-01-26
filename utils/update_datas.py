@@ -721,7 +721,7 @@ def get_yf_virtual_data():
             })
 
             # 保存文件
-            filename = f"datas/virtual/{name}历史数据.csv"
+            filename = f"datas/raw/virtual/{name}历史数据.csv"
             ensure_dir(filename)
             hist[['日期', '收盘', '开盘', '高', '低', '交易量']].to_csv(filename, index=False)
             logger.info(f"{name}数据: {filename} 已更新，共 {len(hist)} 条记录")
