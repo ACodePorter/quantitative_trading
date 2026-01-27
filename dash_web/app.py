@@ -29,7 +29,7 @@ THEMES = {
     "Yeti": dbc.themes.YETI,
 }
 
-app = Dash(__name__, use_pages=True)
+app = Dash(__name__, use_pages=True, suppress_callback_exceptions=True)
 
 # 硬编码的自定义导航顺序
 CUSTOM_ORDER = [

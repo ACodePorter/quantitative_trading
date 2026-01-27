@@ -3,11 +3,12 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from dash import html, dcc
+from dash import html, dcc, Input, Output, callback
 import dash_bootstrap_components as dbc
 import dash
 
 from loguru import logger
+from utils.chart_utils import transform_for_view
 
 
 dash.register_page(__name__)
@@ -97,41 +98,6 @@ category_counts = get_reits_categories(df_reits)
 
 # 绘制整体的历史数据图, 用merged的历史数据
 df = pd.read_csv('datas/processed/reits/reits_merged.csv', parse_dates=['日期'])
-
-# 用px.line绘图，y是所有非日期列
-fig = px.line(
-    df,
-    x='日期',
-    y=[col for col in df.columns if col != '日期'],
-    title='REITs历史价格走势',
-    color_discrete_sequence=px.colors.qualitative.Dark24,
-)
-
-fig.update_layout(
-    title='REITs历史价格走势',
-    xaxis_title='日期',
-    yaxis_title='开盘价',
-    legend_title='REITs名称',
-    height=1000,
-    template='plotly_white'
-)
-fig.update_xaxes(
-    rangeslider_visible=True,  # 添加滑动块
-    minor=dict(ticks="inside", showgrid=True),  # 辅助刻度
-    # 范围选择器按钮
-    rangeselector=dict(
-        buttons=list([
-            dict(count=1, label="1month", step="month", stepmode="backward"),
-            dict(count=6, label="6month", step="month", stepmode="backward"),
-            dict(count=1, label="1year", step="year", stepmode="backward"),
-            dict(count=3, label="3year", step="year", stepmode="backward"),
-            dict(count=5, label="5year", step="year", stepmode="backward"),
-            dict(count=10, label="10year", step="year", stepmode="backward"),
-            dict(count=20, label="20year", step="year", stepmode="backward"),
-            dict(step="all")
-        ])
-    )
-)
 
 
 # 创建布局
@@ -239,8 +205,77 @@ layout = dbc.Container([
         ], width=12)
     ]),
     
+    # 视图模式选择器
+    dbc.Row([
+        dbc.Col([
+            html.Div([
+                html.Label("视图模式：", className='fw-bold me-2'),
+                dcc.RadioItems(
+                    id="reits-view-mode",
+                    options=[
+                        {"label": "归一化 (收益率比较)", "value": "normalized"},
+                        {"label": "对数坐标", "value": "log"},
+                        {"label": "线性坐标", "value": "linear"},
+                    ],
+                    value="log",  # 默认对数
+                    inline=True,
+                )
+            ], className='d-flex align-items-center my-3'),
+        ], width=12)
+    ]),
+
     # REITs图表
-    dcc.Graph(figure=fig,),
+    dcc.Graph(id="reits-chart"),
     
     
 ], fluid=True, className='py-4', style={'backgroundColor': '#f8f9fa'})
+
+
+@callback(
+    Output("reits-chart", "figure"),
+    Input("reits-view-mode", "value"),
+)
+def update_reits_chart(view_mode):
+    """根据视图模式更新图表"""
+    # 使用工具函数转换数据
+    df_plot, yaxis_type, yaxis_suffix = transform_for_view(df, view_mode, date_col='日期')
+
+    # 设置 Y 轴标题
+    if view_mode == "normalized":
+        yaxis_title = '归一化值 (起点=1)'
+    else:
+        yaxis_title = '开盘价'
+
+    # 创建图表
+    fig = px.line(
+        df_plot,
+        x='日期',
+        y=[col for col in df_plot.columns if col != '日期'],
+        title='REITs历史价格走势',
+        color_discrete_sequence=px.colors.qualitative.Dark24,
+    )
+
+    fig.update_layout(
+        title='REITs历史价格走势',
+        xaxis_title='日期',
+        yaxis_title=yaxis_title,
+        legend_title='REITs名称',
+        height=1000,
+        template='plotly_white',
+        yaxis_type=yaxis_type,
+    )
+    fig.update_xaxes(
+        rangeslider_visible=True,
+        minor=dict(ticks="inside", showgrid=True),
+        rangeselector=dict(
+            buttons=list([
+                dict(count=1, label="1M", step="month", stepmode="backward"),
+                dict(count=6, label="6M", step="month", stepmode="backward"),
+                dict(count=1, label="1Y", step="year", stepmode="backward"),
+                dict(count=3, label="3Y", step="year", stepmode="backward"),
+                dict(count=5, label="5Y", step="year", stepmode="backward"),
+                dict(step="all")
+            ])
+        )
+    )
+    return fig
