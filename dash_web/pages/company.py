@@ -1,36 +1,43 @@
-from dash import Dash, dcc, html, Input, Output, callback
+from dash import dcc, html, Input, Output, callback
 import plotly.graph_objects as go
 import pandas as pd
 import dash
-# from pathlib import Path
-# import sys
-#
-# # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# BASE_DIR = Path(__file__).resolve().parent.parent
-# sys.path.append(str(BASE_DIR))
 
 dash.register_page(__name__)
-# app = Dash(__name__, use_pages=True, pages_folder="my_apps")
 
-layout = html.Div(
-    [
-        html.H4("google stock candlestick chart"),
+layout = html.Div([
+    html.H4("股票K线图"),
+    # 视图模式选择器
+    html.Div([
+        html.Label("视图模式：", className='fw-bold me-2'),
+        dcc.RadioItems(
+            id="view-mode",
+            options=[
+                {"label": "对数坐标", "value": "log"},
+                {"label": "线性坐标", "value": "linear"},
+            ],
+            value="log",  # 默认对数
+            inline=True,
+        ),
+        html.Div(style={'width': '20px'}),  # 间隔
         dcc.Checklist(
             id="toggle-rangeslider",
-            options=[{"label": "Include Rangeslider", "value": "slider"}],
+            options=[{"label": "显示范围滑块", "value": "slider"}],
             value=["slider"],
+            inline=True,
         ),
-        dcc.Graph(id="graph"),
-    ]
-)
+    ], className='d-flex align-items-center my-3'),
+    dcc.Graph(id="graph"),
+])
 
 
 @callback(
     Output("graph", "figure"),
+    Input("view-mode", "value"),
     Input("toggle-rangeslider", "value"),
 )
-def display_candlestick(value):
-    # "https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv"
+def display_candlestick(view_mode, slider_value):
+    """根据视图模式和滑块设置更新K线图"""
     df = pd.read_excel("datas/raw/stocks/gegu_stock_ak.xlsx")
 
     fig = go.Figure(
@@ -42,33 +49,23 @@ def display_candlestick(value):
             close=df["close"],
         )
     )
+
     fig.update_layout(
-        xaxis_rangeslider_visible="slider" in value,
+        xaxis_rangeslider_visible="slider" in slider_value,
         height=1000,
+        yaxis_type=view_mode,  # 使用选择的视图模式
     )
     fig.update_xaxes(
-        # dtick="M1",
-        # tickformat="%b\n%Y",
-        # tickformat="%Y",
-        rangeslider_visible=True,  # 添加滑动块
-        # 范围选择器按钮
+        rangeslider_visible=True,
         rangeselector=dict(
             buttons=list([
-                dict(count=1, label="1month", step="month", stepmode="backward"),
-                dict(count=6, label="6month", step="month", stepmode="backward"),
-                # dict(count=1, label="YTD", step="year", stepmode="todate"),
-                dict(count=1, label="1year", step="year", stepmode="backward"),
-                dict(count=3, label="3year", step="year", stepmode="backward"),
-                dict(count=5, label="5year", step="year", stepmode="backward"),
-                dict(count=10, label="10year", step="year", stepmode="backward"),
-                dict(count=20, label="20year", step="year", stepmode="backward"),
+                dict(count=1, label="1M", step="month", stepmode="backward"),
+                dict(count=6, label="6M", step="month", stepmode="backward"),
+                dict(count=1, label="1Y", step="year", stepmode="backward"),
+                dict(count=3, label="3Y", step="year", stepmode="backward"),
+                dict(count=5, label="5Y", step="year", stepmode="backward"),
                 dict(step="all")
             ])
         )
-        # ticklabelmode="period"
     )
     return fig
-
-
-# if __name__ == "__main__":
-#     app.run_server(debug=True)
