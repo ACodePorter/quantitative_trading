@@ -73,8 +73,8 @@ TODO:
   - [x] 数据
   - [x] 绘图
   - [ ] 策略(指标, 买卖)
-- [ ] virtual
-  - [ ] 数据
+- [x] virtual
+  - [x] 数据
   - [x] 绘图
   - [ ] 策略(指标, 买卖)
 
@@ -93,12 +93,11 @@ pandas_ta: 轻量、易用，集成 Pandas。
 性能优化:
 
 - [x] metals: 计算单价
-- [ ] reits, index: 多个csv读取,很慢, 改用保存结果
+- [x] reits, index: 多个csv读取,很慢, 改用保存结果
+- [ ] Linear Scale 和 Log Scale
 
 
 
 
 - [ ] 按钮刷新数据的日志问题
 - [ ] 统一异常处理
-
-

@@ -56,6 +56,6 @@ fig.update_xaxes(
 )
 
 layout = html.Div([
-    html.H4("加密货币走势，关注变化，而不是价格"),
+    html.H4("加密货币单价不重要： 决定一个币涨幅空间的是市值（Market Cap），而不是单价。计算公式： $市值 = 单价 \times 流通供应量$。"),
     dcc.Graph(figure=fig)
 ])
