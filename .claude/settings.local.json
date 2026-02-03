@@ -6,7 +6,15 @@
       "Bash(git commit:*)",
       "Bash(source:*)",
       "Bash(git mv:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(find:*)",
+      "Bash(timeout 10 python:*)",
+      "Bash(done)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)"
     ]
   }
 }

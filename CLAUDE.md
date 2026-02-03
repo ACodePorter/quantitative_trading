@@ -41,15 +41,6 @@ docker-compose up --build
 # Service runs on port 8050
 ```
 
-### Development Tools
-```bash
-# Compile requirements from requirements.in
-pip-compile requirements.in
-
-# Show dependency tree
-pipdeptree
-```
-
 ## Architecture Overview
 
 This is a **multi-layered quantitative trading platform** that processes financial data, implements investment strategies, and presents analysis through a web interface.
@@ -161,12 +152,13 @@ When data is large, requires complex computation, or expensive multi-source merg
 - **reits.py**: Historical merged REITs data (time-series aggregation)
 - **period.py**: GDP/CPI macroeconomic data (multi-source merging)
 
-#### **Use Raw Data** (`datas/raw/` or `datas/virtual/`)
+#### **Use Raw Data** (`datas/raw/`)
 When data is small, simple to merge, or requires real-time updates:
 - **virtual.py**: Cryptocurrency data (small datasets, simple merge)
 - **bond.py**: Convertible bonds (latest data needed, complex business logic in-page)
 - **metals.py**: Precious metals prices (real-time quotes)
 - **home.py**: News feeds (latest aggregation)
+- **virtual.py**
 
 #### **Decision Criteria**
 | Factor | Processed | Raw |
