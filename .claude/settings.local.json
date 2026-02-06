@@ -14,7 +14,16 @@
       "Bash(timeout 10 python:*)",
       "Bash(done)",
       "Bash(git push:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell:*)",
+      "Bash(openspec:*)",
+      "Bash(uv add:*)",
+      "Bash(uv run python:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(uv run pytest:*)"
     ]
   }
 }
