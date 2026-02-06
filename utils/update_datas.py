@@ -38,6 +38,86 @@ def safe_call(func, *args, timeout_seconds=10, **kwargs):
         return None
 
 
+def data_handler(func):
+    """数据获取函数的统一异常处理装饰器
+
+    自动捕获异常并记录详细的调试信息：
+    - 函数名
+    - 异常类型
+    - 异常消息
+    - 发生位置
+    - 局部变量
+
+    使用:
+        @data_handler
+        def get_ak_news_data():
+            # 不需要 try-except
+            df = safe_call(ak.stock_info_global_ths)
+            ...
+    """
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            # 获取异常位置信息
+            tb = e.__traceback__
+
+            # 找到异常发生的实际位置
+            # 跳过 wrapper 帧，找到实际执行函数的帧
+            frame = None
+            filename = ""
+            lineno = 0
+            func_name = ""
+
+            if tb:
+                # 首先尝试使用 traceback 的第一帧（异常发生位置）
+                first_tb = tb
+                first_frame = first_tb.tb_frame
+                first_filename = first_frame.f_code.co_filename
+                first_lineno = first_tb.tb_lineno
+                first_func_name = first_frame.f_code.co_name
+
+                # 检查第一帧是否在 update_datas.py 中（wrapper 帧）
+                if "update_datas.py" not in first_filename:
+                    # 第一帧不在 update_datas.py，直接使用
+                    frame = first_frame
+                    filename = first_filename
+                    lineno = first_lineno
+                    func_name = first_func_name
+                else:
+                    # 第一帧在 update_datas.py 中，查看下一帧
+                    next_tb = first_tb.tb_next
+                    if next_tb is not None:
+                        frame = next_tb.tb_frame
+                        filename = frame.f_code.co_filename
+                        lineno = next_tb.tb_lineno
+                        func_name = frame.f_code.co_name
+                    else:
+                        # 没有下一帧，使用第一帧
+                        frame = first_frame
+                        filename = first_filename
+                        lineno = first_lineno
+                        func_name = first_func_name
+
+            logger.error(f"【异常】{func.__name__} 执行失败")
+            logger.error(f"  位置: {filename}:{lineno} in {func_name}")
+            logger.error(f"  类型: {type(e).__name__}")
+            logger.error(f"  消息: {str(e)}")
+
+            # 获取局部变量（截断长值）
+            if frame:
+                local_vars = {}
+                for k, v in frame.f_locals.items():
+                    v_str = str(v)[:100]  # 限制长度
+                    local_vars[k] = v_str
+                if local_vars:
+                    logger.error(f"  变量: {local_vars}")
+
+            return None
+
+    return wrapper
+
+
 # TODO: 目录改为日期
 
 def ensure_dir(file_path):
@@ -47,94 +127,76 @@ def ensure_dir(file_path):
         os.makedirs(directory)
 
 
+@data_handler
 def get_ak_news_data():
     """获取 akshare 新闻数据"""
-    try:
-        date_str = datetime.now().strftime('%Y%m%d')
+    date_str = datetime.now().strftime('%Y%m%d')
 
-        # 全球财经直播
-        df1 = safe_call(ak.stock_info_global_ths, timeout_seconds=10)
-        if df1 is not None:
-            filename = f"datas/raw/news/ak_stock_info_global_ths.csv"
-            ensure_dir(filename)
-            df1.to_csv(filename, index=False)
-            logger.info(f"全球财经直播数据: {filename} 已更新")
+    # 全球财经直播
+    df1 = safe_call(ak.stock_info_global_ths, timeout_seconds=10)
+    if df1 is not None:
+        filename = f"datas/raw/news/ak_stock_info_global_ths.csv"
+        ensure_dir(filename)
+        df1.to_csv(filename, index=False)
+        logger.info(f"全球财经直播数据: {filename} 已更新")
 
-        # 同花顺财经-电报
-        df2 = safe_call(ak.stock_info_global_cls, timeout_seconds=10)
-        if df2 is not None:
-            filename = f"datas/raw/news/ak_stock_info_global_cls.csv"
-            ensure_dir(filename)
-            df2.to_csv(filename, index=False)
-            logger.info(f"同花顺财经-电报数据: {filename} 已更新")
+    # 同花顺财经-电报
+    df2 = safe_call(ak.stock_info_global_cls, timeout_seconds=10)
+    if df2 is not None:
+        filename = f"datas/raw/news/ak_stock_info_global_cls.csv"
+        ensure_dir(filename)
+        df2.to_csv(filename, index=False)
+        logger.info(f"同花顺财经-电报数据: {filename} 已更新")
 
-        # 东方财富-财经早餐
-        df3 = safe_call(ak.stock_info_cjzc_em, timeout_seconds=10)
-        if df3 is not None:
-            filename = f"datas/raw/news/ak_stock_info_cjzc_em.csv"
-            ensure_dir(filename)
-            df3.to_csv(filename, index=False)
-            logger.info(f"东方财富-财经早餐数据: {filename} 已更新")
+    # 东方财富-财经早餐
+    df3 = safe_call(ak.stock_info_cjzc_em, timeout_seconds=10)
+    if df3 is not None:
+        filename = f"datas/raw/news/ak_stock_info_cjzc_em.csv"
+        ensure_dir(filename)
+        df3.to_csv(filename, index=False)
+        logger.info(f"东方财富-财经早餐数据: {filename} 已更新")
 
-        # stock_info_global_sina
-        df4 = safe_call(ak.stock_info_global_sina, timeout_seconds=10)
-        if df4 is not None:
-            filename = f"datas/raw/news/ak_stock_info_global_sina.csv"
-            ensure_dir(filename)
-            df4.to_csv(filename, index=False)
-            logger.info(f"新浪财经-全球财经新闻数据: {filename} 已更新")
+    # stock_info_global_sina
+    df4 = safe_call(ak.stock_info_global_sina, timeout_seconds=10)
+    if df4 is not None:
+        filename = f"datas/raw/news/ak_stock_info_global_sina.csv"
+        ensure_dir(filename)
+        df4.to_csv(filename, index=False)
+        logger.info(f"新浪财经-全球财经新闻数据: {filename} 已更新")
 
-        # stock_info_global_em
-        df5 = safe_call(ak.stock_info_global_em, timeout_seconds=10)
-        if df5 is not None:
-            filename = f"datas/raw/news/ak_stock_info_global_em.csv"
-            ensure_dir(filename)
-            df5.to_csv(filename, index=False)
-            logger.info(f"东方财富-全球财经新闻数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取akshare新闻数据处理失败: {str(e)}")
+    # stock_info_global_em
+    df5 = safe_call(ak.stock_info_global_em, timeout_seconds=10)
+    if df5 is not None:
+        filename = f"datas/raw/news/ak_stock_info_global_em.csv"
+        ensure_dir(filename)
+        df5.to_csv(filename, index=False)
+        logger.info(f"东方财富-全球财经新闻数据: {filename} 已更新")
     
     
+@data_handler
 def get_ak_reits_data():
 
     """
     获取 akshare reits 数据
     """
-    try:
-        # date_str = datetime.now().strftime('%Y%m%d')
-        # reits列表
-        reits_list = safe_call(ak.reits_realtime_em, timeout_seconds=10)
-        if reits_list is not None:
-            filename = f"datas/raw/reits/reits_realtime_em.csv"
-            ensure_dir(filename)
-            reits_list.to_csv(filename, index=False)
-            logger.info(f"REITs列表数据: {filename} 已更新")
+    # date_str = datetime.now().strftime('%Y%m%d')
+    # reits列表
+    reits_list = safe_call(ak.reits_realtime_em, timeout_seconds=10)
+    if reits_list is not None:
+        filename = f"datas/raw/reits/reits_realtime_em.csv"
+        ensure_dir(filename)
+        reits_list.to_csv(filename, index=False)
+        logger.info(f"REITs列表数据: {filename} 已更新")
 
-            # reits_hist_em
+        # reits_hist_em
 
-            for symbol, name in zip(reits_list['代码'], reits_list['名称']):
-                try:
-                    df = safe_call(ak.reits_hist_em, symbol=symbol, timeout_seconds=10)
-                except Exception as e:
-                    logger.error(f"获取REITs {symbol} 数据失败: {str(e)}")
-
-                    import traceback
-                    import pprint
-                    print('traceback.print_exc()')
-                    traceback.print_exc()
-
-                    print("Locals:", pprint.pformat(locals()))
-
-                    continue
-                if df is not None:
-                    filename = f"datas/raw/reits/reits_hist_em_{symbol}_{name}.csv"
-                    ensure_dir(filename)
-                    df.to_csv(filename, index=False)
-                    logger.info(f"REITs {symbol} 数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取akshare REITs数据处理失败: {str(e)}")
+        for symbol, name in zip(reits_list['代码'], reits_list['名称']):
+            df = safe_call(ak.reits_hist_em, symbol=symbol, timeout_seconds=10)
+            if df is not None:
+                filename = f"datas/raw/reits/reits_hist_em_{symbol}_{name}.csv"
+                ensure_dir(filename)
+                df.to_csv(filename, index=False)
+                logger.info(f"REITs {symbol} 数据: {filename} 已更新")
         
     # merge_ak_reits()
         
@@ -184,111 +246,99 @@ def merge_ak_reits():
 
     
     
+@data_handler
 def get_ak_metals_data():
     """获取 akshare 贵金属数据"""
-    try:
-        # date_str = datetime.now().strftime('%Y%m%d')
-        # 黄金持仓数据
-        gold_data = safe_call(ak.macro_cons_gold, timeout_seconds=10)
+    # date_str = datetime.now().strftime('%Y%m%d')
+    # 黄金持仓数据
+    gold_data = safe_call(ak.macro_cons_gold, timeout_seconds=10)
 
-        if gold_data is not None:
-            gold_data['单价'] = gold_data['总价值']/gold_data['总库存']
-            gold_data['单价'] = gold_data['单价'].round(2)
+    if gold_data is not None:
+        gold_data['单价'] = gold_data['总价值']/gold_data['总库存']
+        gold_data['单价'] = gold_data['单价'].round(2)
 
-            filename = f"datas/raw/metals/macro_cons_gold.csv"
-            ensure_dir(filename)
-            gold_data.to_csv(filename, index=False)
-            logger.info(f"黄金持仓数据: {filename} 已更新")
+        filename = f"datas/raw/metals/macro_cons_gold.csv"
+        ensure_dir(filename)
+        gold_data.to_csv(filename, index=False)
+        logger.info(f"黄金持仓数据: {filename} 已更新")
 
-        # 白银持仓数据
-        silver_data = safe_call(ak.macro_cons_silver, timeout_seconds=10)
+    # 白银持仓数据
+    silver_data = safe_call(ak.macro_cons_silver, timeout_seconds=10)
 
-        if silver_data is not None:
-            silver_data['单价'] = silver_data['总价值']/silver_data['总库存']
-            silver_data['单价'] = silver_data['单价'].round(2)
+    if silver_data is not None:
+        silver_data['单价'] = silver_data['总价值']/silver_data['总库存']
+        silver_data['单价'] = silver_data['单价'].round(2)
 
-            filename = f"datas/raw/metals/macro_cons_silver.csv"
-            ensure_dir(filename)
-            silver_data.to_csv(filename, index=False)
-            logger.info(f"白银持仓数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取akshare 贵金属数据处理失败: {str(e)}")
+        filename = f"datas/raw/metals/macro_cons_silver.csv"
+        ensure_dir(filename)
+        silver_data.to_csv(filename, index=False)
+        logger.info(f"白银持仓数据: {filename} 已更新")
         
     
+@data_handler
 def get_ak_industry_data():
     """获取 akshare 行业数据"""
-    try:
-        date_str = datetime.now().strftime('%Y%m%d')
+    date_str = datetime.now().strftime('%Y%m%d')
 
-        # 行业分类数据
+    # 行业分类数据
 
-        industry_list = safe_call(ak.stock_sector_spot, timeout_seconds=10)
-        if industry_list is not None:
-            filename = f"datas/raw/n_indexes/ak_industry_list_{date_str}.csv"
-            ensure_dir(filename)
-            industry_list.to_csv(filename, index=False)
-            logger.info(f"行业分类数据: {filename} 已更新")
+    industry_list = safe_call(ak.stock_sector_spot, timeout_seconds=10)
+    if industry_list is not None:
+        filename = f"datas/raw/n_indexes/ak_industry_list_{date_str}.csv"
+        ensure_dir(filename)
+        industry_list.to_csv(filename, index=False)
+        logger.info(f"行业分类数据: {filename} 已更新")
 
-        # industry_list_dfcf = ak.stock_board_industry_name_em()  # 行业板块-名称， 推荐
-        # industry_list_ths = ak.stock_board_industry_summary_ths()  # 同花顺行业一览表
-        # ak.stock_fund_flow_industry()
-        # industry_list_xl = ak.stock_sector_spot()
-        # logger.info("行业分类数据已更新")
-
-    except Exception as e:
-        logger.error(f"获取akshare行业数据处理失败: {str(e)}")
+    # industry_list_dfcf = ak.stock_board_industry_name_em()  # 行业板块-名称， 推荐
+    # industry_list_ths = ak.stock_board_industry_summary_ths()  # 同花顺行业一览表
+    # ak.stock_fund_flow_industry()
+    # industry_list_xl = ak.stock_sector_spot()
+    # logger.info("行业分类数据已更新")
         
 
+@data_handler
 def get_ak_bond_data():
     """获取 akshare 债券数据"""
-    try:
-        date_str = datetime.now().strftime('%Y%m%d')
+    date_str = datetime.now().strftime('%Y%m%d')
 
-        # 可转债数据
-        conv_bond = safe_call(ak.bond_zh_cov, timeout_seconds=10)
-        if conv_bond is not None:
-            filename = f"datas/raw/bonds/ak_bond_zh_cov.csv"
-            ensure_dir(filename)
-            conv_bond.to_csv(filename, index=False)
-            logger.info(f"可转债数据: {filename} 已更新")
+    # 可转债数据
+    conv_bond = safe_call(ak.bond_zh_cov, timeout_seconds=10)
+    if conv_bond is not None:
+        filename = f"datas/raw/bonds/ak_bond_zh_cov.csv"
+        ensure_dir(filename)
+        conv_bond.to_csv(filename, index=False)
+        logger.info(f"可转债数据: {filename} 已更新")
 
-        # 国债收益率数据
-        bond_rate = safe_call(ak.bond_zh_us_rate, timeout_seconds=10)
-        if bond_rate is not None:
-            filename = f"datas/raw/bonds/ak_cn_us_rate.csv"
-            ensure_dir(filename)
-            bond_rate.to_csv(filename, index=False)
-            logger.info(f"中美债券收益率数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取akshare债券数据处理失败: {str(e)}")
+    # 国债收益率数据
+    bond_rate = safe_call(ak.bond_zh_us_rate, timeout_seconds=10)
+    if bond_rate is not None:
+        filename = f"datas/raw/bonds/ak_cn_us_rate.csv"
+        ensure_dir(filename)
+        bond_rate.to_csv(filename, index=False)
+        logger.info(f"中美债券收益率数据: {filename} 已更新")
         
         
+@data_handler
 def get_ak_index_global_data():
     """
     获取 akshare 全球指数数据
     """
-    try:
-        # date_str = datetime.now().strftime('%Y%m%d')
-        # 全球指数列表
-        index_global = safe_call(ak.index_global_spot_em, timeout_seconds=10)
-        if index_global is not None:
-            filename = f"datas/raw/indexes/ak_index_global_spot_em.csv"
-            ensure_dir(filename)
-            index_global.to_csv(filename, index=False)
-            logger.info(f"全球指数列表数据: {filename} 已更新")
+    # date_str = datetime.now().strftime('%Y%m%d')
+    # 全球指数列表
+    index_global = safe_call(ak.index_global_spot_em, timeout_seconds=10)
+    if index_global is not None:
+        filename = f"datas/raw/indexes/ak_index_global_spot_em.csv"
+        ensure_dir(filename)
+        index_global.to_csv(filename, index=False)
+        logger.info(f"全球指数列表数据: {filename} 已更新")
 
-            for symbol in index_global['名称'].unique():
-                df = safe_call(ak.index_global_hist_em, symbol=symbol, timeout_seconds=10)
-                if df is not None:
-                    filename = f"datas/raw/indexes/ak_index_global_hist_em_{symbol.replace('/', '')}.csv"
-                    ensure_dir(filename)
-                    df.to_csv(filename, index=False)
-                    logger.info(f"全球指数 {symbol} 数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取akshare全球指数数据处理失败: {str(e)}")
+        for symbol in index_global['名称'].unique():
+            df = safe_call(ak.index_global_hist_em, symbol=symbol, timeout_seconds=10)
+            if df is not None:
+                filename = f"datas/raw/indexes/ak_index_global_hist_em_{symbol.replace('/', '')}.csv"
+                ensure_dir(filename)
+                df.to_csv(filename, index=False)
+                logger.info(f"全球指数 {symbol} 数据: {filename} 已更新")
         
     # merge_ak_index()
     
@@ -392,59 +442,54 @@ def get_start_date(csvs: list) -> str:
         return min(common_dates)
 
 
+@data_handler
 def get_ak_fund_data():
     """获取 akshare 基金数据"""
-    try:
-        date_str = datetime.now().strftime('%Y%m%d')
+    date_str = datetime.now().strftime('%Y%m%d')
 
-        # ETF基金列表
-        etf_list = safe_call(ak.fund_etf_category_sina, timeout_seconds=10)
-        if etf_list is not None:
-            filename = f"datas/raw/funds/ak_etf_list_{date_str}.csv"
-            ensure_dir(filename)
-            etf_list.to_csv(filename, index=False)
-            logger.info(f"ETF基金列表: {filename} 已更新")
+    # ETF基金列表
+    etf_list = safe_call(ak.fund_etf_category_sina, timeout_seconds=10)
+    if etf_list is not None:
+        filename = f"datas/raw/funds/ak_etf_list_{date_str}.csv"
+        ensure_dir(filename)
+        etf_list.to_csv(filename, index=False)
+        logger.info(f"ETF基金列表: {filename} 已更新")
 
-        # # 基金公司数据
-        # fund_aum = safe_call(ak.fund_aum_em, timeout_seconds=10)
-        # if fund_aum is not None:
-        #     filename = f"datas/raw/funds/ak_fund_aum_{date_str}.csv"
-        #     ensure_dir(filename)
-        #     fund_aum.to_csv(filename, index=False)
-        #     logger.info(f"基金公司数据: {filename} 已更新")
+    # # 基金公司数据
+    # fund_aum = safe_call(ak.fund_aum_em, timeout_seconds=10)
+    # if fund_aum is not None:
+    #     filename = f"datas/raw/funds/ak_fund_aum_{date_str}.csv"
+    #     ensure_dir(filename)
+    #     fund_aum.to_csv(filename, index=False)
+    #     logger.info(f"基金公司数据: {filename} 已更新")
 
-        # ak.fund_portfolio_industry_allocation_em()  # 基金行业配置
-    except Exception as e:
-        logger.error(f"获取akshare基金数据处理失败: {str(e)}")
+    # ak.fund_portfolio_industry_allocation_em()  # 基金行业配置
     
     
+@data_handler
 def get_ak_macro_data():
     """获取 akshare 宏观经济数据"""
-    try:
-        # CPI数据
-        get_ak_cpi_data()
+    # CPI数据
+    get_ak_cpi_data()
 
-        # GDP数据
-        get_ak_gdp_data()
-        
-        # date_str = datetime.now().strftime('%Y%m%d')
+    # GDP数据
+    get_ak_gdp_data()
 
-        # # 中国PMI数据
-        # pmi_data = ak.macro_china_pmi_yearly()
-        # filename = f"datas/raw/macro/ak_china_pmi_{date_str}.csv"
-        # ensure_dir(filename)
-        # pmi_data.to_csv(filename, index=False)
-        # logger.info("中国PMI数据已更新")
-        
-        # # 中国货币供应量
-        # money_supply = ak.macro_china_money_supply()
-        # filename = f"datas/raw/macro/ak_china_money_supply_{date_str}.csv"
-        # ensure_dir(filename)
-        # money_supply.to_csv(filename, index=False)
-        # logger.info("中国货币供应量数据已更新")
+    # date_str = datetime.now().strftime('%Y%m%d')
 
-    except Exception as e:
-        logger.error(f"获取akshare宏观数据失败: {str(e)}")
+    # # 中国PMI数据
+    # pmi_data = ak.macro_china_pmi_yearly()
+    # filename = f"datas/raw/macro/ak_china_pmi_{date_str}.csv"
+    # ensure_dir(filename)
+    # pmi_data.to_csv(filename, index=False)
+    # logger.info("中国PMI数据已更新")
+
+    # # 中国货币供应量
+    # money_supply = ak.macro_china_money_supply()
+    # filename = f"datas/raw/macro/ak_china_money_supply_{date_str}.csv"
+    # ensure_dir(filename)
+    # money_supply.to_csv(filename, index=False)
+    # logger.info("中国货币供应量数据已更新")
 
 
 def get_ak_cpi_data():
@@ -534,126 +579,111 @@ def get_ak_gdp_data():
         canada_gdp.to_csv(filename, index=False)
         logger.info(f"加拿大GDP数据: {filename} 已更新")
 
+@data_handler
 def get_yf_market_data():
     """获取 yfinance 市场数据"""
-    try:
-        date_str = datetime.now().strftime('%Y%m%d')
-        
-        # 主要市场指数
-        tickers = {
-            '^GSPC': 'SP500',
-            '^DJI': 'DowJones',
-            '^IXIC': 'NASDAQ',
-            '^N225': 'Nikkei225',
-            '^FTSE': 'FTSE100',
-            '^GDAXI': 'DAX',
-            '000001.SS': 'SSE',
-            '399001.SZ': 'SZSE'
-        }
-        
-        # TODO: 获取SP500数据失败: Too Many Requests. Rate limited. Try after a while.
-        
-        # for symbol, name in tickers.items():
-        #     try:
-        #         ticker = yf.Ticker(symbol)
-        #         # 获取历史数据
-        #         hist = ticker.history(period="1y")
-        #         filename = f"datas/raw/indexes/yf_{name}_{date_str}.csv"
-        #         ensure_dir(filename)
-        #         hist.to_csv(filename)
-        #         logger.info(f"{name}指数数据已更新")
-                
-        #         # 获取基本信息
-        #         info = pd.Series(ticker.info)
-        #         filename = f"datas/raw/indexes/yf_{name}_info_{date_str}.csv"
-        #         ensure_dir(filename)
-        #         info.to_csv(filename)
-        #         logger.info(f"{name}指数信息已更新")
-                
-        #     except Exception as e:
-        #         logger.error(f"获取{name}数据失败: {str(e)}")
+    date_str = datetime.now().strftime('%Y%m%d')
 
-    except Exception as e:
-        logger.error(f"获取yfinance数据失败: {str(e)}")
+    # 主要市场指数
+    tickers = {
+        '^GSPC': 'SP500',
+        '^DJI': 'DowJones',
+        '^IXIC': 'NASDAQ',
+        '^N225': 'Nikkei225',
+        '^FTSE': 'FTSE100',
+        '^GDAXI': 'DAX',
+        '000001.SS': 'SSE',
+        '399001.SZ': 'SZSE'
+    }
+
+    # TODO: 获取SP500数据失败: Too Many Requests. Rate limited. Try after a while.
+
+    # for symbol, name in tickers.items():
+    #     try:
+    #         ticker = yf.Ticker(symbol)
+    #         # 获取历史数据
+    #         hist = ticker.history(period="1y")
+    #         filename = f"datas/raw/indexes/yf_{name}_{date_str}.csv"
+    #         ensure_dir(filename)
+    #         hist.to_csv(filename)
+    #         logger.info(f"{name}指数数据已更新")
+    #
+    #         # 获取基本信息
+    #         info = pd.Series(ticker.info)
+    #         filename = f"datas/raw/indexes/yf_{name}_info_{date_str}.csv"
+    #         ensure_dir(filename)
+    #         info.to_csv(filename)
+    #         logger.info(f"{name}指数信息已更新")
+    #
+    #     except Exception as e:
+    #         logger.error(f"获取{name}数据失败: {str(e)}")
 
 
+@data_handler
 def get_ef_stock_data():
     """获取股票相关数据"""
-    try:
-        # 获取所有A股列表
-        # date_str = datetime.now().strftime('%Y%m%d')
+    # 获取所有A股列表
+    # date_str = datetime.now().strftime('%Y%m%d')
 
-        for k in [
-            '沪深A股',
-            '美股',
-            '港股',
-            '行业板块',
-            '概念板块',
-            '可转债',
-            'ETF',
-        ]:
-            # PE in data
-            df = safe_call(ef.stock.get_realtime_quotes, k, timeout_seconds=10)
-            if df is not None:
-                filename = f"datas/raw/stocks/ef_{k}.csv"
-                df.to_csv(filename, index=False)
-                logger.info(f"ef {k} 数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取ef股票数据处理失败: {str(e)}")
+    for k in [
+        '沪深A股',
+        '美股',
+        '港股',
+        '行业板块',
+        '概念板块',
+        '可转债',
+        'ETF',
+    ]:
+        # PE in data
+        df = safe_call(ef.stock.get_realtime_quotes, k, timeout_seconds=10)
+        if df is not None:
+            filename = f"datas/raw/stocks/ef_{k}.csv"
+            df.to_csv(filename, index=False)
+            logger.info(f"ef {k} 数据: {filename} 已更新")
 
 
+@data_handler
 def get_ef_bond_data():
     """获取债券相关数据"""
-    try:
-        # date_str = datetime.now().strftime('%Y%m%d')
-        # 获取可转债数据
-        # bond_list = safe_call(ef.bond.get_realtime_quotes, timeout_seconds=10)
-        # if bond_list is not None:
-        #     filename = f"datas/raw/bonds/ef_bond_list_{date_str}.csv"
-        #     bond_list.to_csv(filename, index=False)
+    # date_str = datetime.now().strftime('%Y%m%d')
+    # 获取可转债数据
+    # bond_list = safe_call(ef.bond.get_realtime_quotes, timeout_seconds=10)
+    # if bond_list is not None:
+    #     filename = f"datas/raw/bonds/ef_bond_list_{date_str}.csv"
+    #     bond_list.to_csv(filename, index=False)
 
-        bond_base_info = safe_call(ef.bond.get_all_base_info, timeout_seconds=10)
-        if bond_base_info is not None:
-            filename = f"datas/raw/bonds/ef_get_all_base_info.csv"
-            bond_base_info.to_csv(filename, index=False)
-            logger.info(f"债券数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取债券数据处理失败: {str(e)}")
+    bond_base_info = safe_call(ef.bond.get_all_base_info, timeout_seconds=10)
+    if bond_base_info is not None:
+        filename = f"datas/raw/bonds/ef_get_all_base_info.csv"
+        bond_base_info.to_csv(filename, index=False)
+        logger.info(f"债券数据: {filename} 已更新")
 
 
+@data_handler
 def get_ef_futures_data():
     """获取期货相关数据"""
-    try:
-        # 获取期货合约列表
-        date_str = datetime.now().strftime('%Y%m%d')
-        futures_list = safe_call(ef.futures.get_realtime_quotes, timeout_seconds=10)
-        if futures_list is not None:
-            filename = f"datas/raw/futures/ef_futures_list_{date_str}.csv"
-            ensure_dir(filename)
-            futures_list.to_csv(filename, index=False)
-            logger.info(f"期货合约列表数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取期货数据处理失败: {str(e)}")
+    # 获取期货合约列表
+    date_str = datetime.now().strftime('%Y%m%d')
+    futures_list = safe_call(ef.futures.get_realtime_quotes, timeout_seconds=10)
+    if futures_list is not None:
+        filename = f"datas/raw/futures/ef_futures_list_{date_str}.csv"
+        ensure_dir(filename)
+        futures_list.to_csv(filename, index=False)
+        logger.info(f"期货合约列表数据: {filename} 已更新")
 
 
+@data_handler
 def get_ak_jsl_bond():
-    try:
-        cookies = os.getenv('JISILU_COOKIES')
-        df = safe_call(ak.bond_cb_jsl, cookie=cookies, timeout_seconds=10)
-        if df is not None:
-            if len(df) < 200:
-                logger.error(f'jsl df get fail, need to login: https://www.jisilu.cn/data/cbnew/#cb')
-                return
-            # breakpoint()
-            filename = f"datas/raw/bonds/conv_{datetime.now().strftime("%Y%m%d")}.csv"
-            df.to_csv(filename, index=False)
-            logger.info(f"jsl债券数据: {filename} 已更新")
-
-    except Exception as e:
-        logger.error(f"获取jsl债券数据处理失败: {str(e)}")
+    cookies = os.getenv('JISILU_COOKIES')
+    df = safe_call(ak.bond_cb_jsl, cookie=cookies, timeout_seconds=10)
+    if df is not None:
+        if len(df) < 200:
+            logger.error(f'jsl df get fail, need to login: https://www.jisilu.cn/data/cbnew/#cb')
+            return
+        # breakpoint()
+        filename = f"datas/raw/bonds/conv_{datetime.now().strftime("%Y%m%d")}.csv"
+        df.to_csv(filename, index=False)
+        logger.info(f"jsl债券数据: {filename} 已更新")
     
 
 def get_eq_stock_data():
@@ -680,29 +710,25 @@ def ana_ak_bonds(bond_id2names: dict):
         df_detail.to_csv(f'datas/raw/bonds/details/{bond_name}.csv', index=False)
         
 
+@data_handler
 def ana_ef_fund(codes: list):
     """获取基金相关数据"""
-    try:
-        date_str = datetime.now().strftime('%Y%m%d')
-        
-        for code in codes:
-            ef.fund.get_pdf_reports(code)      # 基金公告, 非常老旧10年前的pdf
-            logger.info(f"{code}基金pdf, 已更新")
-            
-            df0 = ef.fund.get_base_info(code)        # 基金基本信息
-            filename = f"datas/raw/funds/ef_get_base_info_{date_str}.csv"
-            df0.to_csv(filename, index=False)
-            logger.info(f"{code} 基金基本信息: {filename} 已更新")
-            
-            df = ef.fund.get_types_percentage(code)  # 基金类型占比
-            filename = f"datas/raw/funds/ef_get_types_percentage_{date_str}.csv"
-            df.to_csv(filename, index=False)
-            logger.info(f"{code} 基金类型占比: {filename} 已更新")
-            # df2 = ef.stock.get_members(code)         # 获取指数的成分股, FIXME: notwork
-            
+    date_str = datetime.now().strftime('%Y%m%d')
 
-    except Exception as e:
-        logger.error(f"获取基金数据失败: {str(e)}")
+    for code in codes:
+        ef.fund.get_pdf_reports(code)      # 基金公告, 非常老旧10年前的pdf
+        logger.info(f"{code}基金pdf, 已更新")
+
+        df0 = ef.fund.get_base_info(code)        # 基金基本信息
+        filename = f"datas/raw/funds/ef_get_base_info_{date_str}.csv"
+        df0.to_csv(filename, index=False)
+        logger.info(f"{code} 基金基本信息: {filename} 已更新")
+
+        df = ef.fund.get_types_percentage(code)  # 基金类型占比
+        filename = f"datas/raw/funds/ef_get_types_percentage_{date_str}.csv"
+        df.to_csv(filename, index=False)
+        logger.info(f"{code} 基金类型占比: {filename} 已更新")
+        # df2 = ef.stock.get_members(code)         # 获取指数的成分股, FIXME: notwork
 
 
 """===============================stage================================="""
@@ -738,6 +764,7 @@ def update_ak3():
     merge_ak_reits()
 
 
+@data_handler
 def get_yf_virtual_data():
     """获取 yfinance 虚拟货币历史数据
 
@@ -760,40 +787,36 @@ def get_yf_virtual_data():
     }
 
     for symbol, name in virtual_currencies.items():
-        try:
-            # 创建 Ticker 并获取历史数据的包装函数
-            def fetch_virtual_data():
-                ticker = yf.Ticker(symbol)
-                return ticker.history(period='max')
+        # 创建 Ticker 并获取历史数据的包装函数
+        def fetch_virtual_data():
+            ticker = yf.Ticker(symbol)
+            return ticker.history(period='max')
 
-            hist = safe_call(fetch_virtual_data, timeout_seconds=10)
+        hist = safe_call(fetch_virtual_data, timeout_seconds=10)
 
-            if hist is None:
-                continue
+        if hist is None:
+            continue
 
-            if hist.empty:
-                logger.warning(f"{name}({symbol}) 数据为空，跳过")
-                continue
+        if hist.empty:
+            logger.warning(f"{name}({symbol}) 数据为空，跳过")
+            continue
 
-            # 格式转换
-            hist = hist.reset_index()
-            hist['日期'] = hist['Date'].dt.strftime('%Y-%m-%d')
-            hist = hist.rename(columns={
-                'Close': '收盘',
-                'Open': '开盘',
-                'High': '高',
-                'Low': '低',
-                'Volume': '交易量'
-            })
+        # 格式转换
+        hist = hist.reset_index()
+        hist['日期'] = hist['Date'].dt.strftime('%Y-%m-%d')
+        hist = hist.rename(columns={
+            'Close': '收盘',
+            'Open': '开盘',
+            'High': '高',
+            'Low': '低',
+            'Volume': '交易量'
+        })
 
-            # 保存文件
-            filename = f"datas/raw/virtual/{name}历史数据.csv"
-            ensure_dir(filename)
-            hist[['日期', '收盘', '开盘', '高', '低', '交易量']].to_csv(filename, index=False)
-            logger.info(f"{name}数据: {filename} 已更新，共 {len(hist)} 条记录")
-
-        except Exception as e:
-            logger.error(f"获取{name}({symbol})数据处理失败: {str(e)}")
+        # 保存文件
+        filename = f"datas/raw/virtual/{name}历史数据.csv"
+        ensure_dir(filename)
+        hist[['日期', '收盘', '开盘', '高', '低', '交易量']].to_csv(filename, index=False)
+        logger.info(f"{name}数据: {filename} 已更新，共 {len(hist)} 条记录")
 
 
 if __name__ == "__main__":
