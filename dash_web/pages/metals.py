@@ -10,12 +10,15 @@ dash.register_page(__name__)
 df_gold = pd.read_csv("datas/raw/metals/macro_cons_gold.csv")
 df_silver = pd.read_csv("datas/raw/metals/macro_cons_silver.csv")
 
-# 合并数据为一个 DataFrame
-df = pd.DataFrame({
-    'date': df_gold['日期'],
-    'Gold': df_gold['单价'],
-    'Silver': df_silver['单价']
-}).dropna()
+# 准备各自的数据
+df_gold_temp = df_gold[["日期", "单价"]].copy()
+df_gold_temp.columns = ["date", "Gold"]
+
+df_silver_temp = df_silver[["日期", "单价"]].copy()
+df_silver_temp.columns = ["date", "Silver"]
+
+# 使用 outer merge 保留所有日期
+df = pd.merge(df_gold_temp, df_silver_temp, on="date", how="outer").sort_values("date")
 
 
 # Layout 必须在回调函数之前定义
